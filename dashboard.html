@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cancelled Opportunities Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            background: #f3f2f2;
+            color: #3e3e3c;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #0b5cab;
+            color: white;
+            padding: 0 1.5rem;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+
+        header svg { opacity: 0.9; }
+
+        .page {
+            max-width: 1400px;
+            margin: 1.5rem auto;
+            padding: 0 1.5rem;
+        }
+
+        /* Summary Cards */
+        .summary-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #dddbda;
+            border-radius: 4px;
+            padding: 1rem 1.25rem;
+            text-align: center;
+            box-shadow: 0 2px 2px rgba(0,0,0,.08);
+        }
+
+        .card-label {
+            font-size: 0.7rem;
+            color: #706e6b;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.35rem;
+        }
+
+        .card-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #032d60;
+        }
+
+        .card-value.small { font-size: 1.1rem; }
+
+        /* Filter bar */
+        .filter-bar {
+            background: white;
+            border: 1px solid #dddbda;
+            border-radius: 4px;
+            padding: 0.875rem 1rem;
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 2px rgba(0,0,0,.05);
+        }
+
+        .filter-group { display: flex; flex-direction: column; gap: 0.25rem; }
+        .filter-group label { font-size: 0.75rem; font-weight: 600; color: #3e3e3c; }
+
+        .filter-group input,
+        .filter-group select {
+            border: 1px solid #dddbda;
+            border-radius: 4px;
+            padding: 0.4rem 0.6rem;
+            font-size: 0.8rem;
+            color: #3e3e3c;
+            background: white;
+            height: 32px;
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: #0176d3;
+            box-shadow: 0 0 0 2px rgba(1,118,211,.25);
+        }
+
+        .filter-group.wide input { width: 220px; }
+        .filter-group.date input { width: 145px; }
+        .filter-group.stage select { width: 155px; }
+
+        .btn {
+            height: 32px;
+            padding: 0 0.875rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid #dddbda;
+            background: white;
+            color: #0176d3;
+            align-self: flex-end;
+            white-space: nowrap;
+            transition: background 0.1s;
+        }
+
+        .btn:hover { background: #f3f2f2; }
+
+        /* Table */
+        .table-wrap {
+            background: white;
+            border: 1px solid #dddbda;
+            border-radius: 4px;
+            overflow: auto;
+            box-shadow: 0 2px 2px rgba(0,0,0,.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        thead {
+            background: #f3f2f2;
+            border-bottom: 2px solid #dddbda;
+        }
+
+        th {
+            padding: 0.6rem 0.875rem;
+            text-align: left;
+            font-weight: 700;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #3e3e3c;
+            white-space: nowrap;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th:hover { background: #e8e8e8; }
+        th .sort-icon { margin-left: 4px; opacity: 0.5; }
+        th.sorted .sort-icon { opacity: 1; color: #0176d3; }
+
+        td {
+            padding: 0.6rem 0.875rem;
+            border-bottom: 1px solid #f3f2f2;
+            white-space: nowrap;
+            color: #3e3e3c;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8f8f8; }
+
+        td a {
+            color: #0176d3;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        td a:hover { text-decoration: underline; }
+
+        .badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        .badge-lost { background: #fce8e8; color: #c23934; }
+        .badge-cancelled { background: #fff1d0; color: #7a4f00; }
+
+        .amount { text-align: right; font-variant-numeric: tabular-nums; }
+
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.6rem 0.875rem;
+            border-top: 1px solid #f3f2f2;
+            background: #fafaf9;
+            font-size: 0.75rem;
+            color: #706e6b;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #706e6b;
+        }
+
+        .empty p { margin-top: 0.5rem; font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+<header>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    Cancelled Opportunities Dashboard
+</header>
+
+<div class="page">
+
+    <div class="summary-row">
+        <div class="card">
+            <div class="card-label">Total Cancelled</div>
+            <div class="card-value" id="stat-count">—</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Total Amount Lost</div>
+            <div class="card-value" id="stat-amount">—</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Most Recent Cancellation</div>
+            <div class="card-value small" id="stat-recent">—</div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="filter-group wide">
+            <label>Search by Name or Account</label>
+            <input type="search" id="filter-search" placeholder="Search…">
+        </div>
+        <div class="filter-group date">
+            <label>Cancelled From</label>
+            <input type="date" id="filter-from">
+        </div>
+        <div class="filter-group date">
+            <label>Cancelled To</label>
+            <input type="date" id="filter-to">
+        </div>
+        <div class="filter-group stage">
+            <label>Stage</label>
+            <select id="filter-stage">
+                <option value="">All Stages</option>
+                <option value="Closed Lost">Closed Lost</option>
+                <option value="Cancelled">Cancelled</option>
+            </select>
+        </div>
+        <button class="btn" onclick="exportCSV()">⬇ Export CSV</button>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th onclick="sortBy('name')" id="th-name">Opportunity Name <span class="sort-icon">↕</span></th>
+                    <th onclick="sortBy('account')" id="th-account">Account <span class="sort-icon">↕</span></th>
+                    <th onclick="sortBy('amount')" id="th-amount">Amount <span class="sort-icon">↕</span></th>
+                    <th onclick="sortBy('closeDate')" id="th-closeDate">Close Date <span class="sort-icon">↕</span></th>
+                    <th onclick="sortBy('stage')" id="th-stage">Stage <span class="sort-icon">↕</span></th>
+                    <th onclick="sortBy('cancelledDate')" id="th-cancelledDate" class="sorted">Cancelled Date <span class="sort-icon">↓</span></th>
+                    <th onclick="sortBy('changedBy')" id="th-changedBy">Changed By <span class="sort-icon">↕</span></th>
+                    <th onclick="sortBy('previousStage')" id="th-previousStage">Previous Stage <span class="sort-icon">↕</span></th>
+                    <th onclick="sortBy('owner')" id="th-owner">Owner <span class="sort-icon">↕</span></th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+        <div class="footer">
+            <span id="footer-count"></span>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ─── Sample Data ─────────────────────────────────────────────────────────────
+// Replace this array with real exported data as needed.
+const RAW_DATA = [
+    { id:'0061', name:'Acme Corp — Enterprise License', account:'Acme Corp',         amount:120000, closeDate:'2025-12-31', stage:'Closed Lost',  cancelledDate:'2026-01-15T14:23:00', changedBy:'Sarah Johnson',  previousStage:'Negotiation/Review', owner:'Sarah Johnson' },
+    { id:'0062', name:'Globex Q1 Expansion',            account:'Globex Inc',         amount: 45000, closeDate:'2025-11-30', stage:'Closed Lost',  cancelledDate:'2025-12-02T09:10:00', changedBy:'Tom Richards',   previousStage:'Value Proposition',  owner:'Tom Richards' },
+    { id:'0063', name:'Initech Platform Upgrade',       account:'Initech LLC',        amount: 87500, closeDate:'2026-01-15', stage:'Cancelled',    cancelledDate:'2026-01-20T16:45:00', changedBy:'Maria Gonzalez', previousStage:'Proposal/Price Quote',owner:'Maria Gonzalez' },
+    { id:'0064', name:'Umbrella Corp Security Suite',   account:'Umbrella Corp',      amount:230000, closeDate:'2026-02-28', stage:'Closed Lost',  cancelledDate:'2026-02-10T11:00:00', changedBy:'James Lee',      previousStage:'Id. Decision Makers', owner:'James Lee' },
+    { id:'0065', name:'Massive Dyn. CRM Rollout',       account:'Massive Dynamics',   amount: 60000, closeDate:'2025-10-31', stage:'Closed Lost',  cancelledDate:'2025-11-04T08:30:00', changedBy:'Emily Chen',     previousStage:'Prospecting',         owner:'Emily Chen' },
+    { id:'0066', name:'Soylent Analytics Package',      account:'Soylent Corp',       amount: 32000, closeDate:'2026-03-15', stage:'Cancelled',    cancelledDate:'2026-03-01T13:22:00', changedBy:'David Park',     previousStage:'Needs Analysis',      owner:'David Park' },
+    { id:'0067', name:'Cyberdyne AI Subscription',      account:'Cyberdyne Systems',  amount:175000, closeDate:'2026-01-31', stage:'Closed Lost',  cancelledDate:'2026-01-28T17:05:00', changedBy:'Sarah Johnson',  previousStage:'Perception Analysis', owner:'Sarah Johnson' },
+    { id:'0068', name:'Tyrell Corp Data Warehouse',     account:'Tyrell Corp',        amount: 95000, closeDate:'2025-09-30', stage:'Cancelled',    cancelledDate:'2025-10-05T10:15:00', changedBy:'Tom Richards',   previousStage:'Value Proposition',   owner:'Tom Richards' },
+    { id:'0069', name:'Weyland-Yutani Cloud Migration', account:'Weyland-Yutani Corp',amount:310000, closeDate:'2026-04-01', stage:'Closed Lost',  cancelledDate:'2026-04-03T09:45:00', changedBy:'Maria Gonzalez', previousStage:'Negotiation/Review',  owner:'Maria Gonzalez' },
+    { id:'0070', name:'Stark Ind. Dev Tools License',   account:'Stark Industries',   amount: 28000, closeDate:'2026-02-14', stage:'Cancelled',    cancelledDate:'2026-02-12T15:30:00', changedBy:'James Lee',      previousStage:'Qualification',       owner:'James Lee' },
+    { id:'0071', name:'Wayne Ent. Security Audit',      account:'Wayne Enterprises',  amount: 55000, closeDate:'2025-08-31', stage:'Closed Lost',  cancelledDate:'2025-09-02T12:00:00', changedBy:'Emily Chen',     previousStage:'Prospecting',         owner:'Emily Chen' },
+    { id:'0072', name:'Oscorp Biotech Integration',     account:'Oscorp Industries',  amount:142000, closeDate:'2026-03-31', stage:'Cancelled',    cancelledDate:'2026-03-25T14:00:00', changedBy:'David Park',     previousStage:'Proposal/Price Quote',owner:'David Park' },
+];
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let sortField = 'cancelledDate';
+let sortAsc = false;
+let filtered = [];
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function fmt(n) {
+    return new Intl.NumberFormat('en-US', { style:'currency', currency:'USD', maximumFractionDigits:0 }).format(n);
+}
+
+function fmtDate(iso) {
+    if (!iso) return '—';
+    return new Intl.DateTimeFormat('en-US', { year:'numeric', month:'short', day:'numeric' }).format(new Date(iso));
+}
+
+function fmtDateTime(iso) {
+    if (!iso) return '—';
+    return new Intl.DateTimeFormat('en-US', {
+        year:'numeric', month:'short', day:'numeric',
+        hour:'numeric', minute:'2-digit'
+    }).format(new Date(iso));
+}
+
+function badgeHtml(stage) {
+    const cls = stage === 'Cancelled' ? 'badge-cancelled' : 'badge-lost';
+    return `<span class="badge ${cls}">${stage}</span>`;
+}
+
+function render() {
+    const search   = document.getElementById('filter-search').value.toLowerCase();
+    const from     = document.getElementById('filter-from').value;
+    const to       = document.getElementById('filter-to').value;
+    const stage    = document.getElementById('filter-stage').value;
+
+    filtered = RAW_DATA.filter(o => {
+        if (search && !o.name.toLowerCase().includes(search) && !o.account.toLowerCase().includes(search)) return false;
+        if (stage && o.stage !== stage) return false;
+        if (from && new Date(o.cancelledDate) < new Date(from)) return false;
+        if (to) {
+            const end = new Date(to); end.setHours(23,59,59,999);
+            if (new Date(o.cancelledDate) > end) return false;
+        }
+        return true;
+    });
+
+    filtered.sort((a, b) => {
+        let av = a[sortField], bv = b[sortField];
+        if (typeof av === 'string') av = av.toLowerCase();
+        if (typeof bv === 'string') bv = bv.toLowerCase();
+        if (av == null) return 1; if (bv == null) return -1;
+        return av < bv ? (sortAsc ? -1 : 1) : av > bv ? (sortAsc ? 1 : -1) : 0;
+    });
+
+    const tbody = document.getElementById('table-body');
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="9"><div class="empty"><strong>No cancelled opportunities found</strong><p>Try adjusting your filters.</p></div></td></tr>`;
+    } else {
+        tbody.innerHTML = filtered.map(o => `
+            <tr>
+                <td><a href="#">${o.name}</a></td>
+                <td>${o.account}</td>
+                <td class="amount">${fmt(o.amount)}</td>
+                <td>${fmtDate(o.closeDate)}</td>
+                <td>${badgeHtml(o.stage)}</td>
+                <td>${fmtDateTime(o.cancelledDate)}</td>
+                <td>${o.changedBy || '—'}</td>
+                <td>${o.previousStage || '—'}</td>
+                <td>${o.owner}</td>
+            </tr>`).join('');
+    }
+
+    // Footer
+    document.getElementById('footer-count').textContent =
+        `Showing ${filtered.length} of ${RAW_DATA.length} opportunities`;
+
+    // Summary cards (always reflect full dataset)
+    document.getElementById('stat-count').textContent = RAW_DATA.length;
+
+    const totalAmt = filtered.reduce((s, o) => s + (o.amount || 0), 0);
+    document.getElementById('stat-amount').textContent = fmt(totalAmt);
+
+    const allWithDate = RAW_DATA.filter(o => o.cancelledDate);
+    if (allWithDate.length) {
+        const latest = allWithDate.reduce((p, c) =>
+            new Date(c.cancelledDate) > new Date(p.cancelledDate) ? c : p);
+        document.getElementById('stat-recent').textContent = fmtDate(latest.cancelledDate);
+    }
+
+    // Sort header indicators
+    const fields = ['name','account','amount','closeDate','stage','cancelledDate','changedBy','previousStage','owner'];
+    fields.forEach(f => {
+        const th = document.getElementById('th-' + f);
+        if (!th) return;
+        const icon = th.querySelector('.sort-icon');
+        if (f === sortField) {
+            th.classList.add('sorted');
+            icon.textContent = sortAsc ? '↑' : '↓';
+        } else {
+            th.classList.remove('sorted');
+            icon.textContent = '↕';
+        }
+    });
+}
+
+// ─── Sort ─────────────────────────────────────────────────────────────────────
+function sortBy(field) {
+    if (sortField === field) { sortAsc = !sortAsc; }
+    else { sortField = field; sortAsc = false; }
+    render();
+}
+
+// ─── Export ───────────────────────────────────────────────────────────────────
+function exportCSV() {
+    const headers = ['Opportunity Name','Account','Amount','Close Date','Stage','Cancelled Date','Changed By','Previous Stage','Owner'];
+    const rows = filtered.map(o => [
+        `"${o.name.replace(/"/g,'""')}"`,
+        `"${o.account.replace(/"/g,'""')}"`,
+        o.amount,
+        o.closeDate,
+        `"${o.stage}"`,
+        o.cancelledDate ? new Date(o.cancelledDate).toLocaleString() : '',
+        `"${(o.changedBy||'').replace(/"/g,'""')}"`,
+        `"${(o.previousStage||'').replace(/"/g,'""')}"`,
+        `"${o.owner.replace(/"/g,'""')}"`
+    ]);
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(new Blob([csv], {type:'text/csv'})),
+        download: 'cancelled-opportunities.csv'
+    });
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ─── Wire up filters ──────────────────────────────────────────────────────────
+['filter-search','filter-from','filter-to','filter-stage'].forEach(id =>
+    document.getElementById(id).addEventListener('input', render)
+);
+
+render();
+</script>
+</body>
+</html>
